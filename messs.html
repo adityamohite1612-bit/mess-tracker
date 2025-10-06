@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mess Tracker</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+  <div id="loginScreen" class="w-full max-w-sm p-6 bg-white rounded-2xl shadow-xl">
+    <h2 class="text-2xl font-bold mb-4 text-center">Admin Login</h2>
+    <input id="username" type="text" placeholder="Username" class="w-full mb-2 px-4 py-2 border rounded-md" />
+    <input id="password" type="password" placeholder="Password" class="w-full mb-4 px-4 py-2 border rounded-md" />
+    <button onclick="login()" class="w-full bg-blue-500 text-white py-2 rounded-md hover:bg-blue-600">Login</button>
+    <p id="loginError" class="text-red-500 mt-2 text-center hidden">Invalid credentials</p>
+  </div>
+
+  <div id="app" class="hidden w-full max-w-2xl p-6 bg-white rounded-2xl shadow-xl">
+    <h1 class="text-3xl font-bold text-center mb-4">🍽️ Mess Tracker</h1>
+
+    <!-- Date Picker and Checkboxes -->
+    <label class="block mb-4">
+      <span class="text-gray-700">Select Date</span>
+      <input type="date" id="date" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" />
+    </label>
+
+    <div class="grid grid-cols-1 gap-2 mb-4">
+      <label class="flex items-center">
+        <input type="checkbox" id="breakfast" class="mr-2"> Breakfast
+      </label>
+      <label class="flex items-center">
+        <input type="checkbox" id="lunch" class="mr-2"> Lunch
+      </label>
+      <label class="flex items-center">
+        <input type="checkbox" id="dinner" class="mr-2"> Dinner
+      </label>
+    </div>
+
+    <div class="text-center mb-4">
+      <strong>Total Meals:</strong> <span id="total">0</span>/3
+    </div>
+
+    <div class="flex gap-2 mb-6">
+      <button onclick="saveMeals()" class="w-full bg-green-500 text-white py-2 rounded-md hover:bg-green-600">Save</button>
+      <button onclick="exportCSV()" class="w-full bg-yellow-500 text-white py-2 rounded-md hover:bg-yellow-600">Export to CSV</button>
+    </div>
+
+    <!-- Summary Table -->
+    <div>
+      <h2 class="text-xl font-bold mb-2">Meal Summary</h2>
+      <table class="w-full table-auto border text-sm">
+        <thead>
+          <tr class="bg-gray-200">
+            <th class="p-2 border">Date</th>
+            <th class="p-2 border">Breakfast</th>
+            <th class="p-2 border">Lunch</th>
+            <th class="p-2 border">Dinner</th>
+          </tr>
+        </thead>
+        <tbody id="summaryTable"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const loginScreen = document.getElementById("loginScreen");
+    const app = document.getElementById("app");
+    const loginError = document.getElementById("loginError");
+
+    function login() {
+      const username = document.getElementById("username").value;
+      const password = document.getElementById("password").value;
+      if (username === "admin" && password === "1234") {
+        loginScreen.classList.add("hidden");
+        app.classList.remove("hidden");
+        loadSummary();
+      } else {
+        loginError.classList.remove("hidden");
+      }
+    }
+
+    function saveMeals() {
+      const date = document.getElementById("date").value;
+      if (!date) return alert("Please select a date.");
+
+      const data = {
+        breakfast: document.getElementById("breakfast").checked,
+        lunch: document.getElementById("lunch").checked,
+        dinner: document.getElementById("dinner").checked,
+      };
+
+      localStorage.setItem(`meals-${date}`, JSON.stringify(data));
+      updateTotal();
+      loadSummary();
+    }
+
+    function updateTotal() {
+      const total = ["breakfast", "lunch", "dinner"].reduce(
+        (acc, meal) => acc + (document.getElementById(meal).checked ? 1 : 0),
+        0
+      );
+      document.getElementById("total").innerText = total;
+    }
+
+    function loadSummary() {
+      const tbody = document.getElementById("summaryTable");
+      tbody.innerHTML = "";
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith("meals-")) {
+          const date = key.replace("meals-", "");
+          const { breakfast, lunch, dinner } = JSON.parse(localStorage.getItem(key));
+          tbody.innerHTML += `
+            <tr>
+              <td class="p-2 border text-center">${date}</td>
+              <td class="p-2 border text-center">${breakfast ? '✅' : '❌'}</td>
+              <td class="p-2 border text-center">${lunch ? '✅' : '❌'}</td>
+              <td class="p-2 border text-center">${dinner ? '✅' : '❌'}</td>
+            </tr>
+          `;
+        }
+      });
+    }
+
+    function exportCSV() {
+      let csv = "Date,Breakfast,Lunch,Dinner\n";
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith("meals-")) {
+          const date = key.replace("meals-", "");
+          const { breakfast, lunch, dinner } = JSON.parse(localStorage.getItem(key));
+          csv += `${date},${breakfast ? 'Yes' : 'No'},${lunch ? 'Yes' : 'No'},${dinner ? 'Yes' : 'No'}\n`;
+        }
+      });
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'mess-tracker.csv';
+      link.click();
+    }
+
+    ["breakfast", "lunch", "dinner"].forEach(id => {
+      document.getElementById(id).addEventListener("change", updateTotal);
+    });
+  </script>
+</body>
+</html>
